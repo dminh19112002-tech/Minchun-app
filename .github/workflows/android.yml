@@ -9,24 +9,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - name: Setup Java
+      - name: Setup JDK
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android
-        uses: android-actions/setup-android@v3
-
-      - name: Create simple app
+      - name: Create Android project
         run: |
-          mkdir app
           mkdir -p app/src/main/java/com/minchun/app
 
-          echo 'plugins { id "com.android.application" }' > app/build.gradle
-          
+          echo 'plugins { id "com.android.application" }' > build.gradle
+
+          echo 'buildscript {
+            repositories { google(); mavenCentral() }
+            dependencies { classpath "com.android.tools.build:gradle:7.4.2" }
+          }
+          allprojects { repositories { google(); mavenCentral() } }' >> build.gradle
+
           echo 'android {
             compileSdk 33
             defaultConfig {
@@ -36,7 +39,18 @@ jobs:
               versionCode 1
               versionName "1.0"
             }
-          }' >> app/build.gradle
+          }' > app/build.gradle
+
+          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.minchun.app">
+            <application android:label="Minchun">
+              <activity android:name=".MainActivity">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN"/>
+                  <category android:name="android.intent.category.LAUNCHER"/>
+                </intent-filter>
+              </activity>
+            </application>
+          </manifest>' > app/src/main/AndroidManifest.xml
 
           echo 'package com.minchun.app
 
@@ -45,8 +59,6 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
-    private val history = mutableListOf<String>()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -54,55 +66,4 @@ class MainActivity : AppCompatActivity() {
         layout.orientation = LinearLayout.VERTICAL
 
         val text = TextView(this)
-        val result = TextView(this)
-
-        val btnB = Button(this)
-        btnB.text = "Banker 🔴"
-
-        val btnP = Button(this)
-        btnP.text = "Player 🔵"
-
-        layout.addView(text)
-        layout.addView(result)
-        layout.addView(btnB)
-        layout.addView(btnP)
-
-        setContentView(layout)
-
-        fun update() {
-            text.text = "History: ${history.joinToString(" ")}"
-
-            if (history.size >= 3) {
-                val last = history.last()
-                val streak = history.takeLastWhile { it == last }.size
-
-                result.text = if (streak >= 3) {
-                    "👉 Theo $last"
-                } else {
-                    "👉 Quan sát"
-                }
-            }
-        }
-
-        btnB.setOnClickListener {
-            history.add("B")
-            update()
-        }
-
-        btnP.setOnClickListener {
-            history.add("P")
-            update()
-        }
-    }
-}' > app/src/main/java/com/minchun/app/MainActivity.kt
-
-      - name: Build APK
-        run: |
-          gradle wrapper
-          ./gradlew assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v3
-        with:
-          name: Minchun-APK
-          path: app/build/outputs/apk/debug/ 
+        text.text = "Minchun Baccarat Tool"
