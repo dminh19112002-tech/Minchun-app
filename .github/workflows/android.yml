@@ -1,0 +1,108 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android
+        uses: android-actions/setup-android@v3
+
+      - name: Create simple app
+        run: |
+          mkdir app
+          mkdir -p app/src/main/java/com/minchun/app
+
+          echo 'plugins { id "com.android.application" }' > app/build.gradle
+          
+          echo 'android {
+            compileSdk 33
+            defaultConfig {
+              applicationId "com.minchun.app"
+              minSdk 21
+              targetSdk 33
+              versionCode 1
+              versionName "1.0"
+            }
+          }' >> app/build.gradle
+
+          echo 'package com.minchun.app
+
+import android.os.Bundle
+import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
+
+class MainActivity : AppCompatActivity() {
+    private val history = mutableListOf<String>()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val layout = LinearLayout(this)
+        layout.orientation = LinearLayout.VERTICAL
+
+        val text = TextView(this)
+        val result = TextView(this)
+
+        val btnB = Button(this)
+        btnB.text = "Banker 🔴"
+
+        val btnP = Button(this)
+        btnP.text = "Player 🔵"
+
+        layout.addView(text)
+        layout.addView(result)
+        layout.addView(btnB)
+        layout.addView(btnP)
+
+        setContentView(layout)
+
+        fun update() {
+            text.text = "History: ${history.joinToString(" ")}"
+
+            if (history.size >= 3) {
+                val last = history.last()
+                val streak = history.takeLastWhile { it == last }.size
+
+                result.text = if (streak >= 3) {
+                    "👉 Theo $last"
+                } else {
+                    "👉 Quan sát"
+                }
+            }
+        }
+
+        btnB.setOnClickListener {
+            history.add("B")
+            update()
+        }
+
+        btnP.setOnClickListener {
+            history.add("P")
+            update()
+        }
+    }
+}' > app/src/main/java/com/minchun/app/MainActivity.kt
+
+      - name: Build APK
+        run: |
+          gradle wrapper
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: Minchun-APK
+          path: app/build/outputs/apk/debug/ 
